@@ -1,3 +1,6 @@
+//https://github.com/stancecoke/ION_Minimal_Translator
+//by stancecoke
+
 #include <Arduino.h>
 #include "crc8.h"
 
