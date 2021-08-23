@@ -8,6 +8,9 @@
 HardwareSerial hwSerCntrl(1);
 uint8_t receiveBuffer[255];
 uint8_t transmitBuffer[255];
+uint8_t startSequence[255]={0,14,20,1,20,20,20,14,8};
+uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
+uint8_t systemState=0;
 uint8_t BatteryToMotor[22][17]={
   {0x10,0x01,0x20,0x30,0x14}, //00
   {0x10,0x01,0x20,0x32,0x75}, //01
@@ -29,10 +32,12 @@ uint8_t BatteryToMotor[22][17]={
   {0x10,0x02,0x21,0x09,0x00,0xAB}, //17
   {0x10,0x02,0x2B,0x08,0x00,0x94,0x38,0x41,0x70,0x28,0x3A,0x3E,0x92,0x92,0xFA,0x09}, //18
   {0x10,0x02,0x2B,0x08,0x00,0x94,0x38,0x41,0x7C,0x28,0x3A,0x3E,0x92,0x92,0xFA,0x00}, //19
-  {0x10,0x04,0x20,0xCC,0x00} //20
+  {0x10,0x04,0x20,0xCC,0x00}, //20
+  {0x10,0x00,0xB1,0x10,0x20,0x68} //21
   };
 
   uint8_t nbBytes = 0;
+  uint8_t receivedByte = 0;
   uint32_t lastTime = 0;
   uint32_t counter = 0;
   uint8_t length = 255;
@@ -58,7 +63,7 @@ void loop() {
   {
     // Read the incoming byte
     receiveBuffer[nbBytes] = hwSerCntrl.read();  
-    //Serial.print(char(receiveBuffer[nbBytes]));
+    
     //if(receiveBuffer[nbBytes]==0x0A)hwSerCntrl.printf("%d ",counter);
      //hwSerCntrl.println(nbBytes);
   
@@ -86,12 +91,12 @@ void loop() {
         for(int i=0;i<length+5;i++){
         //len = sprintf((uint8_t *)&transmitBuffer+3*i,"%02X",receiveBuffer[i])
 
-        Serial.printf("%02X ",receiveBuffer[i]);
+        //Serial.printf("%02X ",receiveBuffer[i]);
         }
         if(crc!=receiveBuffer[nbBytes]){
           Serial.printf("%02X ",0xFF);
         }
-        Serial.printf("\r");
+        //Serial.printf("\r");
         //hwSerCntrl.write((uint8_t *)&receiveBuffer, length+7 );
 
     } 
@@ -99,30 +104,57 @@ void loop() {
 
  //hwSerCntrl.write((uint8_t *)&receiveBuffer, length+3 );
   
-    if(receiveBuffer[nbBytes]==0x10&&nbBytes>3){
+    if(receiveBuffer[nbBytes]==0x10){
+      Serial.printf("\r");
       nbBytes=0;
       receiveBuffer[nbBytes]=0x10;
       //Serial.println("Start detected!");
       //hwSerCntrl.println("Start detected!");
     }
+    Serial.printf("%02X ",receiveBuffer[nbBytes]);
     nbBytes++;
     
   }
 
     while (Serial.available())
   {
-    // pipe the incoming byte to ION bus
-        hwSerCntrl.print(char(Serial.read()));
+    
+      receivedByte=Serial.read();
+      //pipe the incoming byte to ION bus
+      if(systemState==2)hwSerCntrl.print(char(receivedByte));
+      
   }
 
   if(millis()>lastTime+200){
     lastTime=millis();
     //Serial.println("Hello World!");
     //hwSerCntrl.println("Hello World!");
-    hwSerCntrl.write((uint8_t *)&BatteryToMotor[n], (BatteryToMotor[n][2]&0x0F)+6);
+    if (receivedByte==0xFA){
+      if(!systemState){
+          hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], (BatteryToMotor[startSequence[n]][2]&0x0F)+6);
+          n++;
+        if(n>9){
+          n=0;  
+          systemState=1;
+        }
+      } 
+      if(systemState==1){
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[runSequence[n]], (BatteryToMotor[runSequence[n]][2]&0x0F)+6);
+        n++;
+        if(n>8)n=0;
+
+      }
+    } 
+    if (receivedByte==0xFB){
+      systemState=0;
+      receivedByte=0;
+      n=0;
+    }
+    if (receivedByte==0xFC){
+      systemState=2;
+    }
     counter++;
-    n++;
-    if(n>21)n=0;
+
   }
 }
 
