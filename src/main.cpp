@@ -5,8 +5,12 @@
 
 #include "crc8.h"
 
+void printLatestMessage(void);
+
 HardwareSerial hwSerCntrl(1);
 uint8_t receiveBuffer[255];
+uint8_t lastMessage[255];
+uint8_t lastMessageLength;
 uint8_t transmitBuffer[255];
 uint8_t startSequence[255]={0,14,20,23,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
@@ -48,7 +52,8 @@ uint8_t BatteryToMotor[25][17]={
   uint8_t crc = 0;
   uint8_t n = 0;
   uint8_t messageCounter = 0;
-  uint8_t newMessageFlag = 0;
+  uint8_t startNewMessage = 0;
+  uint8_t NewMessageFlag = 0;
 
 
 void setup() {
@@ -69,25 +74,28 @@ void loop() {
     // Read the incoming byte
     receiveBuffer[nbBytes] = hwSerCntrl.read();  
     
-    //if(receiveBuffer[nbBytes]==0x0A)hwSerCntrl.printf("%d ",counter);
-     //hwSerCntrl.println(nbBytes);
-  
   if(nbBytes==2){
-      length=receiveBuffer[nbBytes]&0xF; //Mask lower four bits for message lenght
+      if((receiveBuffer[nbBytes]>>4)>2&&(receiveBuffer[nbBytes]>>4)<0x0C){ //Nachrichten mit 3Bytes auffangen
+        lastMessageLength=3;
+        printLatestMessage();
+      }
+
+      else length=receiveBuffer[nbBytes]&0xF; //Mask lower four bits for message length
       //hwSerCntrl.printf("erkannte Laenge!,%d\r\n",length);
-      
-    }  
+  }  
+
+  if(nbBytes==3&&(receiveBuffer[1]&0x0F)>2){ //Nachrichten mit 4Bytes auffangen
+        lastMessageLength=4;
+        printLatestMessage();
+  }
 
   if(nbBytes==length+4){
 
 
      crc = crc8_bow((uint8_t *)&receiveBuffer,(length+4)); //Check CRC
       if(crc==receiveBuffer[nbBytes]){
-        //Serial.println("Checksum OK!");
-        //hwSerCntrl.println("Checksum OK!");
-        //receiveBuffer[nbBytes+1]=0x0D;
-        //receiveBuffer[nbBytes+2]=0x0A;
-
+        lastMessageLength=nbBytes+1;
+        printLatestMessage();
       } 
       else{
         //Serial.println("Checksum failed!");
@@ -105,20 +113,26 @@ void loop() {
 
     } 
 
+      if(receiveBuffer[1]==0x40&&receiveBuffer[2]==0x40&&startNewMessage){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);
+      
+      startNewMessage=0;
+    }
+
     if(receivedByte){
     //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden
-    if(receiveBuffer[1]==0x40&&receiveBuffer[2]==0x40&&newMessageFlag){
+    if(receiveBuffer[1]==0x40&&receiveBuffer[2]==0x40&&startNewMessage){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);
-      //hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
-      newMessageFlag=0;
+      
+      startNewMessage=0;
     }
     //Antwort auf 10 20 68
-    if(receiveBuffer[1]==0x20&&receiveBuffer[2]==0x68&&newMessageFlag){
+    if(receiveBuffer[1]==0x20&&receiveBuffer[2]==0x68&&startNewMessage){
       //delayMicroseconds(2000);
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
-      newMessageFlag=0;
+      startNewMessage=0;
       messageCounter++;
-      if (messageCounter>100){
+      /*if (messageCounter>100){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
         messageCounter=0;
       }
@@ -126,37 +140,42 @@ void loop() {
       if (messageCounter==50){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
       }
+      */
       
     }
 
     //Antwort auf 10 21 04 08 94 38 28 3A D7
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x04&&newMessageFlag&&nbBytes>7){
+    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x04&&startNewMessage&&nbBytes>7){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[18], (BatteryToMotor[18][2]&0x0F)+5);
-      newMessageFlag=0;
-    }
+      startNewMessage=0;
+    }  
+    
 
     //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x0A&&newMessageFlag&&nbBytes>13){
+    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x0A&&startNewMessage&&nbBytes>13){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
-      newMessageFlag=0;
+      startNewMessage=0;
+      
     }
 
     //Antwort auf 10 21 01 12 00 D0 
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x01&&newMessageFlag&&nbBytes>5){
+    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x01&&startNewMessage&&nbBytes>5){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
-      newMessageFlag=0;
+      startNewMessage=0;
+      
     }
     }
   
     if(receiveBuffer[nbBytes]==0x10){
-      Serial.printf("\r");
+      
+      
       nbBytes=0;
       receiveBuffer[nbBytes]=0x10;
-      newMessageFlag=1;
+      startNewMessage=1;
       //Serial.println("Start detected!");
       //hwSerCntrl.println("Start detected!");
     }
-    Serial.printf("%02X ",receiveBuffer[nbBytes]);
+    //Serial.printf("%02X ",receiveBuffer[nbBytes]);
     nbBytes++;
     
   }
@@ -206,5 +225,16 @@ void loop() {
     counter++;
 
   }
+}
+
+void printLatestMessage(void){
+      
+      memcpy(lastMessage, receiveBuffer, lastMessageLength);
+      for(int i =0; i<lastMessageLength; i++){
+        Serial.printf("%02X ",lastMessage[i]);
+      }
+      Serial.printf("\r");
+      NewMessageFlag=1
+
 }
 
