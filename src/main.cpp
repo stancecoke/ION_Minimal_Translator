@@ -11,7 +11,7 @@ uint8_t transmitBuffer[255];
 uint8_t startSequence[255]={0,14,20,23,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
 uint8_t systemState=0;
-uint8_t BatteryToMotor[24][17]={
+uint8_t BatteryToMotor[25][17]={
   {0x10,0x01,0x20,0x30,0x14}, //00
   {0x10,0x01,0x20,0x32,0x75}, //01
   {0x10,0x01,0x20,0x33,0xE4}, //02
@@ -35,7 +35,8 @@ uint8_t BatteryToMotor[24][17]={
   {0x10,0x04,0x20,0xCC}, //20
   {0x10,0x00,0xB1}, //21
   {0x10,0x60,0x99}, //22
-  {0x10,0x40,0x40} //23
+  {0x10,0x40,0x40}, //23
+  {0x10,0x44,0x20,0x19} //24
   };
 
   uint8_t nbBytes = 0;
@@ -46,6 +47,7 @@ uint8_t BatteryToMotor[24][17]={
   uint8_t len = 255;
   uint8_t crc = 0;
   uint8_t n = 0;
+  uint8_t messageCounter = 0;
   uint8_t newMessageFlag = 0;
 
 
@@ -102,6 +104,8 @@ void loop() {
 
 
     } 
+
+    if(receivedByte){
     //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden
     if(receiveBuffer[1]==0x40&&receiveBuffer[2]==0x40&&newMessageFlag){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);
@@ -113,6 +117,15 @@ void loop() {
       //delayMicroseconds(2000);
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
       newMessageFlag=0;
+      messageCounter++;
+      if (messageCounter>100){
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
+        messageCounter=0;
+      }
+
+      if (messageCounter==50){
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
+      }
       
     }
 
@@ -129,9 +142,10 @@ void loop() {
     }
 
     //Antwort auf 10 21 01 12 00 D0 
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x01&&newMessageFlag&&nbBytes>13){
+    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x01&&newMessageFlag&&nbBytes>5){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
       newMessageFlag=0;
+    }
     }
   
     if(receiveBuffer[nbBytes]==0x10){
