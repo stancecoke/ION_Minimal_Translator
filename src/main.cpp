@@ -101,77 +101,18 @@ void loop() {
         //Serial.println("Checksum failed!");
         //hwSerCntrl.print("Checksum failed!\r");
       }
-        for(int i=0;i<length+5;i++){
-        //len = sprintf((uint8_t *)&transmitBuffer+3*i,"%02X",receiveBuffer[i])
-
-        //Serial.printf("%02X ",receiveBuffer[i]);
-        }
-        if(crc!=receiveBuffer[nbBytes]){
-          //Serial.printf("%02X ",0xFF);
-        }
-
 
     } 
 
-      if(receiveBuffer[1]==0x40&&receiveBuffer[2]==0x40&&startNewMessage){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);
-      
-      startNewMessage=0;
-    }
-
-    if(receivedByte){
-    //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden
-    if(receiveBuffer[1]==0x40&&receiveBuffer[2]==0x40&&startNewMessage){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);
-      
-      startNewMessage=0;
-    }
-    //Antwort auf 10 20 68
-    if(receiveBuffer[1]==0x20&&receiveBuffer[2]==0x68&&startNewMessage){
-      //delayMicroseconds(2000);
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
-      startNewMessage=0;
-      messageCounter++;
-      /*if (messageCounter>100){
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
-        messageCounter=0;
-      }
-
-      if (messageCounter==50){
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
-      }
-      */
-      
-    }
-
-    //Antwort auf 10 21 04 08 94 38 28 3A D7
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x04&&startNewMessage&&nbBytes>7){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[18], (BatteryToMotor[18][2]&0x0F)+5);
-      startNewMessage=0;
-    }  
     
-
-    //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x0A&&startNewMessage&&nbBytes>13){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
-      startNewMessage=0;
-      
-    }
-
-    //Antwort auf 10 21 01 12 00 D0 
-    if(receiveBuffer[1]==0x21&&receiveBuffer[2]==0x01&&startNewMessage&&nbBytes>5){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
-      startNewMessage=0;
-      
-    }
-    }
+    
   
     if(receiveBuffer[nbBytes]==0x10){
       
       
       nbBytes=0;
       receiveBuffer[nbBytes]=0x10;
-      startNewMessage=1;
+      //startNewMessage=1;
       //Serial.println("Start detected!");
       //hwSerCntrl.println("Start detected!");
     }
@@ -225,6 +166,52 @@ void loop() {
     counter++;
 
   }
+
+  if(receivedByte&&!hwSerCntrl.available()&&NewMessageFlag){
+    NewMessageFlag=0;
+    //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden
+    if(lastMessage[1]==0x40&&lastMessage[2]==0x40){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);     
+    }
+    //Antwort auf 10 20 68
+    else if(lastMessage[1]==0x20&&lastMessage[2]==0x68){
+      delayMicroseconds(1500);
+      /*
+      messageCounter++;
+      if (messageCounter>100){
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
+        messageCounter=0;
+      }
+
+      else if (messageCounter==50){
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
+      }
+
+      else */ hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
+      
+      
+    }
+
+    //Antwort auf 10 21 04 08 94 38 28 3A D7
+    else if(lastMessage[1]==0x21&&lastMessage[2]==0x04){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[18], (BatteryToMotor[18][2]&0x0F)+5);
+      
+    }  
+    
+
+    //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 
+    else if(lastMessage[1]==0x21&&lastMessage[2]==0x0A){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
+        
+    }
+
+    //Antwort auf 10 21 01 12 00 D0 
+    else if(lastMessage[1]==0x21&&lastMessage[2]==0x01){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
+           
+    }
+    
+    }
 }
 
 void printLatestMessage(void){
@@ -234,7 +221,7 @@ void printLatestMessage(void){
         Serial.printf("%02X ",lastMessage[i]);
       }
       Serial.printf("\r");
-      NewMessageFlag=1
+      NewMessageFlag=1;
 
 }
 

@@ -1,0 +1,42 @@
+Nachricht ans Display für Balken:
+
+10 C1 29 26
+
+Segmente in Byte 4:
+off = 		0x01 | 0x02	=	0x03
+eco = 		0x04 | 0x08	=	0x0C
+normal =	0x10 | 0x20	=	0x30
+power = 	0x40 | 0x80 	=	0xC0
+
+
+Display Anwort mit Tastendruck:
+10 22 C2 22 00
+
+Letzte 00:
+01: Taste oben
+02: Taste vorn
+03: beide Tasten
+
+online CRC-Rechner
+https://onlinegdb.com/mXEVFzbspm
+
+Erkenntnis: 
+1. Wenn die Checksumme 0 ist, wird sie nicht mitgesendet! (Oder von meinem Programm nicht detektiert.
+2. 10 00 B1 10 20 68 wird nicht vom Motor gesendet (klingt ja auch logisch, da Motor Adressat ist)
+
+
+10 00 B1 startet polling vom Motor
+10 60 99 stoppt polling vmo Motor
+
+10 21 0A 09 94 C0 00 C7 08 C1 00 00 00 06 D2: vom Motor an Batterie, Byte 6+7 ist Geschwindigkeit in km/h*10
+
+10 C1 29 26 C0 30 C3 43 C1 99 FC CC C0 86: von Batterie an Display, Byte 8 & 0x0F ist 10er Stelle, Bit 9 & 0xF0 ist 1er Stelle, Bit 9 & 0x0F ist erste Nachkommastelle vom Speed.
+
+
+Auf 10 21 01 12 00 D0 vom Motor antwortet Batterie mit 10 02 20 12 9F ist aber beim Abschalten...
+
+Auf 10 40 40 vom Motor, schein Fehlermeldung zu sein, kommt 10 60 99 von Batterie (eigentlich Stoppsignal?!) 
+
+
+Auf Befehl 08 kommt immer individuelle Antwort
+Auf Befehl 09 wird immer gleich quittiert
