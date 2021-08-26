@@ -54,13 +54,14 @@ uint8_t BatteryToMotor[25][17]={
   uint8_t messageCounter = 0;
   uint8_t startNewMessage = 0;
   uint8_t NewMessageFlag = 0;
+  uint8_t UARTidleFlag = 0;
 
 
 void setup() {
   Serial.begin(115200);
   hwSerCntrl.begin(9600, SERIAL_8N1, 27, 14);
   Serial.println("Hello World!");
-  hwSerCntrl.println("Hello World!");
+  //hwSerCntrl.println("Hello World!");
 
 
 }
@@ -71,6 +72,11 @@ void loop() {
   // Check for new data availability in the Serial buffer
   while (hwSerCntrl.available())
   {
+
+    if(UARTidleFlag){
+     // if((millis()-counter)>3)Serial.printf("\r Idle millis: %ld ",millis()-counter);
+      UARTidleFlag=0;
+    }
     // Read the incoming byte
     receiveBuffer[nbBytes] = hwSerCntrl.read();  
     
@@ -109,14 +115,14 @@ void loop() {
   
     if(receiveBuffer[nbBytes]==0x10){
       
-      
+      Serial.printf("\r");
       nbBytes=0;
       receiveBuffer[nbBytes]=0x10;
       //startNewMessage=1;
       //Serial.println("Start detected!");
       //hwSerCntrl.println("Start detected!");
     }
-    //Serial.printf("%02X ",receiveBuffer[nbBytes]);
+    Serial.printf("%02X ",receiveBuffer[nbBytes]);
     nbBytes++;
     
   }
@@ -166,6 +172,12 @@ void loop() {
     counter++;
 
   }
+  if(!hwSerCntrl.available()&&!UARTidleFlag){
+    UARTidleFlag=1;
+    counter= millis();
+  }
+
+  //if((millis()-counter)>50&&systemState==2)hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3); //if system pauses restart
 
   if(receivedByte&&!hwSerCntrl.available()&&NewMessageFlag){
     NewMessageFlag=0;
@@ -175,11 +187,12 @@ void loop() {
     }
     //Antwort auf 10 20 68
     else if(lastMessage[1]==0x20&&lastMessage[2]==0x68){
-      delayMicroseconds(1500);
-      /*
+      
+      
       messageCounter++;
       if (messageCounter>100){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
         messageCounter=0;
       }
 
@@ -187,7 +200,7 @@ void loop() {
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
       }
 
-      else */ hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
+      else  hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
       
       
     }
@@ -210,6 +223,11 @@ void loop() {
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
            
     }
+
+        //Neustart nach Antwort 10 22 00 34 49  
+    else if(lastMessage[1]==0x22&&lastMessage[2]==0x00){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);           
+    }
     
     }
 }
@@ -217,10 +235,11 @@ void loop() {
 void printLatestMessage(void){
       
       memcpy(lastMessage, receiveBuffer, lastMessageLength);
+      /*
       for(int i =0; i<lastMessageLength; i++){
         Serial.printf("%02X ",lastMessage[i]);
       }
-      Serial.printf("\r");
+      Serial.printf("\r");*/
       NewMessageFlag=1;
 
 }
