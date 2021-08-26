@@ -12,10 +12,10 @@ uint8_t receiveBuffer[255];
 uint8_t lastMessage[255];
 uint8_t lastMessageLength;
 uint8_t transmitBuffer[255];
-uint8_t startSequence[255]={0,14,20,23,21};
+uint8_t startSequence[255]={0,14,25,20,23,22,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
 uint8_t systemState=0;
-uint8_t BatteryToMotor[25][17]={
+uint8_t BatteryToMotor[26][17]={
   {0x10,0x01,0x20,0x30,0x14}, //00
   {0x10,0x01,0x20,0x32,0x75}, //01
   {0x10,0x01,0x20,0x33,0xE4}, //02
@@ -40,7 +40,8 @@ uint8_t BatteryToMotor[25][17]={
   {0x10,0x00,0xB1}, //21
   {0x10,0x60,0x99}, //22
   {0x10,0x40,0x40}, //23
-  {0x10,0x44,0x20,0x19} //24
+  {0x10,0x44,0x20,0x19}, //24
+  {0x10,0x64,0x20,0xD2} //25
   };
 
   uint8_t nbBytes = 0;
@@ -142,14 +143,15 @@ void loop() {
     //hwSerCntrl.println("Hello World!");
     if (receivedByte==0xFA){
       if(!systemState){
-          delayMicroseconds(20000);
+          delayMicroseconds(50000);
           if(BatteryToMotor[startSequence[n]][2]==0xB1)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 3);
           else if(BatteryToMotor[startSequence[n]][3]==0xCC)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 4);
           else if(BatteryToMotor[startSequence[n]][2]==0x40)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 3);
+          else if(BatteryToMotor[startSequence[n]][2]==0x99)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 3);
           else hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], (BatteryToMotor[startSequence[n]][2]&0x0F)+5);
           
           n++;
-        if(n>4){
+        if(n>7){
           n=0;  
           systemState=2;
         }
@@ -179,7 +181,7 @@ void loop() {
 
   //if((millis()-counter)>50&&systemState==2)hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3); //if system pauses restart
 
-  if(receivedByte&&!hwSerCntrl.available()&&NewMessageFlag){
+  if(systemState==2&&!hwSerCntrl.available()&&NewMessageFlag){
     NewMessageFlag=0;
     //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden
     if(lastMessage[1]==0x40&&lastMessage[2]==0x40){
