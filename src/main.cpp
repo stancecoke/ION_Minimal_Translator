@@ -2,7 +2,7 @@
 //by stancecoke
 
 #include <Arduino.h>
-
+#include <EEPROM.h>
 #include "crc8.h"
 
 void printLatestMessage(void);
@@ -15,7 +15,7 @@ uint8_t transmitBuffer[255];
 uint8_t startSequence[255]={0,14,25,20,23,22,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
 uint8_t systemState=0;
-uint8_t BatteryToMotor[26][17]={
+uint8_t BatteryToMotor[27][17]={
   {0x10,0x01,0x20,0x30,0x14}, //00
   {0x10,0x01,0x20,0x32,0x75}, //01
   {0x10,0x01,0x20,0x33,0xE4}, //02
@@ -41,12 +41,14 @@ uint8_t BatteryToMotor[26][17]={
   {0x10,0x60,0x99}, //22
   {0x10,0x40,0x40}, //23
   {0x10,0x44,0x20,0x19}, //24
-  {0x10,0x64,0x20,0xD2} //25
+  {0x10,0x64,0x20,0xD2}, //25
+  {0x10, 0xC1, 0x29, 0x26, 0xC0, 0x30, 0xC3, 0x3F, 0xC0, 0x00, 0xFC, 0xCC, 0xC0, 0x73} //26
   };
 
   uint8_t nbBytes = 0;
   uint8_t receivedByte = 0;
   uint32_t lastTime = 0;
+  uint16_t systemLife = 0;
   uint32_t counter = 0;
   uint8_t length = 255;
   uint8_t len = 255;
@@ -63,7 +65,7 @@ void setup() {
   hwSerCntrl.begin(9600, SERIAL_8N1, 27, 14);
   Serial.println("Hello World!");
   //hwSerCntrl.println("Hello World!");
-
+  
 
 }
 
@@ -193,7 +195,8 @@ void loop() {
       
       messageCounter++;
       if (messageCounter>100){
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
+        //hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[26], (BatteryToMotor[26][2]&0x0F)+5);
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
         messageCounter=0;
       }
@@ -209,7 +212,21 @@ void loop() {
 
     //Antwort auf 10 21 04 08 94 38 28 3A D7
     else if(lastMessage[1]==0x21&&lastMessage[2]==0x04){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[18], (BatteryToMotor[18][2]&0x0F)+5);
+      memcpy(transmitBuffer, BatteryToMotor[18], ((BatteryToMotor[18][2]&0x0F)+5));
+      EEPROM.begin(2);
+      //EEPROM.write(0,0x41);
+      //EEPROM.write(1,0x32);
+      systemLife=(EEPROM.read(0)<<8)+EEPROM.read(1);
+      systemLife+=3;
+      //Serial.printf("%04X ",systemLife);
+
+      EEPROM.write(0, (systemLife>>8));
+      EEPROM.write(1, (systemLife&0xFF));
+      EEPROM.end();
+      transmitBuffer[7]=(systemLife>>8);
+      transmitBuffer[8]=(systemLife&0xFF);
+      transmitBuffer[15] = crc8_bow((uint8_t *)&transmitBuffer,(transmitBuffer[2]&0x0F)+4);
+      hwSerCntrl.write((uint8_t *)&transmitBuffer, (transmitBuffer[2]&0x0F)+5);
       
     }  
     
