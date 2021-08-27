@@ -44,6 +44,12 @@ Befehl 09 wird immer mit Payload 0x00 quittiert
 bei 10 21 0A 09 ändert sich nichts mit Änderung der Batteriespannung
 
 Antworten auf 10 21 04 08 94 38 28 3A D7:
-Bytes 7 + 8 erhöhen sich bei jedem Start ?!
+
 Bytes 12, 13 + 14 verändern sich, wenn sich das Rad gedreht hat. 
 Bei nur ein und Ausschalten, ohne Raddrehung bleiben sie gleich.
+
+Motor sendet beim Abschalten unter Befehl 09 als Bytes 12+13 die Bytes, die er beim Einschalten als Bytes 13+14 empfangen hat.
+Batterie sendet beim Einschalten als Bytes 7+8 die er beim letzten Abschalten als Bytes 6+7 mit Befehl 09 vom Motor erhalten hat.
+
+10 01 21 34 01 7F Befehl zum Einschalten?!
+10 01 21 31 00 22 Befehl zum Ausschalten?!
