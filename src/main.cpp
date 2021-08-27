@@ -145,13 +145,13 @@ void loop() {
       if(!systemState){
           delayMicroseconds(50000);
           if(BatteryToMotor[startSequence[n]][2]==0xB1)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 3);
-          else if(BatteryToMotor[startSequence[n]][3]==0xCC)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 4);
+          else if((BatteryToMotor[startSequence[n]][1]&0x0F)==0x04)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 4);
           else if(BatteryToMotor[startSequence[n]][2]==0x40)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 3);
           else if(BatteryToMotor[startSequence[n]][2]==0x99)hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], 3);
           else hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], (BatteryToMotor[startSequence[n]][2]&0x0F)+5);
           
           n++;
-        if(n>7){
+        if(n>6){
           n=0;  
           systemState=2;
         }

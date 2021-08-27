@@ -39,4 +39,11 @@ Auf 10 40 40 vom Motor, schein Fehlermeldung zu sein, kommt 10 60 99 von Batteri
 
 
 Auf Befehl 08 kommt immer individuelle Antwort
-Auf Befehl 09 wird immer gleich quittiert
+Befehl 09 wird immer mit Payload 0x00 quittiert
+
+bei 10 21 0A 09 ändert sich nichts mit Änderung der Batteriespannung
+
+Antworten auf 10 21 04 08 94 38 28 3A D7:
+Bytes 7 + 8 erhöhen sich bei jedem Start ?!
+Bytes 12, 13 + 14 verändern sich, wenn sich das Rad gedreht hat. 
+Bei nur ein und Ausschalten, ohne Raddrehung bleiben sie gleich.
