@@ -19,7 +19,7 @@ uint8_t BatteryToMotor[27][17]={
   {0x10,0x01,0x20,0x30,0x14}, //00
   {0x10,0x01,0x20,0x32,0x75}, //01
   {0x10,0x01,0x20,0x33,0xE4}, //02
-  {0x10,0x01,0x21,0x31,0x00,0x22}, //03
+  {0x10,0x01,0x21,0x31,0x00,0x22}, //03 Aufforderung zum Senden der Abschaltmeldung 10 21 0A 09 94 38 ....
   {0x10,0x01,0x21,0x34,0x01,0x7F}, //04
   {0x10,0x01,0x21,0x34,0x02,0x8F}, //05
   {0x10,0x01,0x21,0x34,0x03,0x1E}, //06
@@ -72,15 +72,15 @@ void setup() {
   /*  EEPROM.begin(6);
 
       EEPROM.write(B0V,0x41);
-      EEPROM.write(B1V,0x2B);
+      EEPROM.write(B1V,0x35);
       EEPROM.write(B0H,0x3E);
-      EEPROM.write(B1H,0x8F);
-      EEPROM.write(B2H,0xCB);
-      EEPROM.write(B3H,0xE2);
+      EEPROM.write(B1H,0x90);
+      EEPROM.write(B2H,0x00);
+      EEPROM.write(B3H,0xD8);
       Serial.printf("%02X ",EEPROM.read(B3H));
       EEPROM.end();
-  */
   
+  */
 
 }
 
@@ -173,12 +173,7 @@ void loop() {
           systemState=2;
         }
       } 
-      if(systemState==1){
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[runSequence[n]], (BatteryToMotor[runSequence[n]][2]&0x0F)+6);
-        n++;
-        if(n>8)n=0;
 
-      }
     } 
     if (receivedByte==0xFB){
       systemState=0;
@@ -203,9 +198,11 @@ void loop() {
 
   if(systemState==2&&!hwSerCntrl.available()&&NewMessageFlag){
     NewMessageFlag=0;
-    //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden
+    //Antwort auf 10 40 40 (Fehlermeldung?!) --> Stopp-Signal zurücksenden und neu starten
     if(lastMessage[1]==0x40&&lastMessage[2]==0x40){
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);     
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3); 
+      delay(2);
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);    
     }
     //Antwort auf 10 20 68
     else if(lastMessage[1]==0x20&&lastMessage[2]==0x68){
@@ -214,9 +211,9 @@ void loop() {
       messageCounter++;
       if (messageCounter>100){
         //hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[20], (BatteryToMotor[20][2]&0x0F)+5);
-        delay(2);
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[20], 4);
+        delay(5);
+        //hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
         messageCounter=0;
       }
 
@@ -226,6 +223,16 @@ void loop() {
 
       else if (messageCounter==75||messageCounter==78){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[25], 4);
+        delay(2);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
+      }
+      else if (receivedByte==0xFE){ //Abschaltsignal senden
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[3], (BatteryToMotor[3][2]&0x0F)+5); 
+        receivedByte=0xFD;
+      }
+      else if (receivedByte==0xFF){ //Einschaltsignal senden
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[4], (BatteryToMotor[4][2]&0x0F)+5); 
+        receivedByte=0xFD;
       }
 
       else  hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
@@ -275,7 +282,7 @@ void loop() {
     
 
     //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 
-    else if(lastMessage[1]==0x21&&lastMessage[2]==0x0A){
+    else if(lastMessage[1]==0x21&&lastMessage[5]==0xC0){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
         
     }
@@ -283,11 +290,17 @@ void loop() {
     //Antwort auf 10 21 01 12 00 D0 
     else if(lastMessage[1]==0x21&&lastMessage[2]==0x01){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
-      hwSerCntrl.write((uint8_t *)&BatteryToMotor[4], (BatteryToMotor[4][2]&0x0F)+5);     
+      //delay(2);
+      //hwSerCntrl.write((uint8_t *)&BatteryToMotor[4], (BatteryToMotor[4][2]&0x0F)+5);     
     }
 
-        //Neustart nach Antwort 10 22 00 34 49  
+    //Neustart nach Antwort 10 22 00 34 49  
     else if(lastMessage[1]==0x22&&lastMessage[2]==0x00){
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);           
+    }
+
+    //Neustart nach Antwort 10 23 00 AB
+    else if(lastMessage[1]==0x23&&lastMessage[2]==0x00){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);           
     }
     
