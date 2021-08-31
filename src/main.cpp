@@ -12,7 +12,7 @@ uint8_t receiveBuffer[255];
 uint8_t lastMessage[255];
 uint8_t lastMessageLength;
 uint8_t transmitBuffer[255];
-uint8_t startSequence[255]={0,14,25,20,23,22,21};
+uint8_t startSequence[255]={24,24,0,14,20,2,25,23,22,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
 uint8_t systemState=0;
 uint8_t BatteryToMotor[27][17]={
@@ -135,7 +135,7 @@ void loop() {
     
       receivedByte=Serial.read();
       //pipe the incoming byte to ION bus
-      if(systemState==2)hwSerCntrl.print(char(receivedByte));
+      if(systemState==3)hwSerCntrl.print(char(receivedByte));
       
   }
 
@@ -171,6 +171,9 @@ void loop() {
       n=0;
     }
     if (receivedByte==0xFC){
+      systemState=3;
+    }
+    if (receivedByte==0xFD){
       systemState=2;
     }
     counter++;
@@ -196,13 +199,18 @@ void loop() {
       messageCounter++;
       if (messageCounter>100){
         //hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[26], (BatteryToMotor[26][2]&0x0F)+5);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[20], (BatteryToMotor[20][2]&0x0F)+5);
+        delay(2);
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
         messageCounter=0;
       }
 
       else if (messageCounter==50){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
+      }
+
+      else if (messageCounter==75||messageCounter==78||){
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[25], 4);
       }
 
       else  hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
@@ -240,7 +248,7 @@ void loop() {
     //Antwort auf 10 21 01 12 00 D0 
     else if(lastMessage[1]==0x21&&lastMessage[2]==0x01){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[16], (BatteryToMotor[16][2]&0x0F)+5);
-           
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[4], (BatteryToMotor[4][2]&0x0F)+5);     
     }
 
         //Neustart nach Antwort 10 22 00 34 49  
