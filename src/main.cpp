@@ -12,7 +12,7 @@ uint8_t receiveBuffer[255];
 uint8_t lastMessage[255];
 uint8_t lastMessageLength;
 uint8_t transmitBuffer[255];
-uint8_t startSequence[255]={24,24,0,14,20,2,25,23,22,21};
+uint8_t startSequence[255]={24,24,0,14,25,25,20,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
 uint8_t systemState=0;
 uint8_t BatteryToMotor[27][17]={
@@ -58,13 +58,28 @@ uint8_t BatteryToMotor[27][17]={
   uint8_t startNewMessage = 0;
   uint8_t NewMessageFlag = 0;
   uint8_t UARTidleFlag = 0;
+  enum EEPROMAddresses { B0V, B1V, B0H, B1H, B2H, B3H };
 
+
+   
 
 void setup() {
   Serial.begin(115200);
   hwSerCntrl.begin(9600, SERIAL_8N1, 27, 14);
   Serial.println("Hello World!");
   //hwSerCntrl.println("Hello World!");
+  //Krücke zum händischen Erzeugen der letzten Nachricht beim Abschalten
+  /*  EEPROM.begin(6);
+
+      EEPROM.write(B0V,0x41);
+      EEPROM.write(B1V,0x2B);
+      EEPROM.write(B0H,0x3E);
+      EEPROM.write(B1H,0x8F);
+      EEPROM.write(B2H,0xCB);
+      EEPROM.write(B3H,0xE2);
+      Serial.printf("%02X ",EEPROM.read(B3H));
+      EEPROM.end();
+  */
   
 
 }
@@ -153,7 +168,7 @@ void loop() {
           else hwSerCntrl.write((uint8_t *)&BatteryToMotor[startSequence[n]], (BatteryToMotor[startSequence[n]][2]&0x0F)+5);
           
           n++;
-        if(n>6){
+        if(n>8){
           n=0;  
           systemState=2;
         }
@@ -209,7 +224,7 @@ void loop() {
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
       }
 
-      else if (messageCounter==75||messageCounter==78||){
+      else if (messageCounter==75||messageCounter==78){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[25], 4);
       }
 
@@ -221,22 +236,42 @@ void loop() {
     //Antwort auf 10 21 04 08 94 38 28 3A D7
     else if(lastMessage[1]==0x21&&lastMessage[2]==0x04){
       memcpy(transmitBuffer, BatteryToMotor[18], ((BatteryToMotor[18][2]&0x0F)+5));
-      EEPROM.begin(2);
-      //EEPROM.write(0,0x41);
-      //EEPROM.write(1,0x32);
-      systemLife=(EEPROM.read(0)<<8)+EEPROM.read(1);
-      systemLife+=3;
-      //Serial.printf("%04X ",systemLife);
+      EEPROM.begin(6);
 
-      EEPROM.write(0, (systemLife>>8));
-      EEPROM.write(1, (systemLife&0xFF));
+      // Werte vom letzen Einschalten wieder Einlesen
+     
+      transmitBuffer[7]=(EEPROM.read(B0V));
+      transmitBuffer[8]=(EEPROM.read(B1V));
+      transmitBuffer[11]=(EEPROM.read(B0H));
+      transmitBuffer[12]=(EEPROM.read(B1H));
+      transmitBuffer[13]=(EEPROM.read(B2H));
+      transmitBuffer[14]=(EEPROM.read(B3H));
+      //Serial.printf("%02X ",transmitBuffer[14]);
+
+
       EEPROM.end();
-      transmitBuffer[7]=(systemLife>>8);
-      transmitBuffer[8]=(systemLife&0xFF);
       transmitBuffer[15] = crc8_bow((uint8_t *)&transmitBuffer,(transmitBuffer[2]&0x0F)+4);
       hwSerCntrl.write((uint8_t *)&transmitBuffer, (transmitBuffer[2]&0x0F)+5);
       
     }  
+
+        //Antwort auf 10 21 0A 09 94 38 xx xx 28 3A xx xx xx xx 94 
+    else if(lastMessage[1]==0x21&&lastMessage[5]==0x38){
+      
+      EEPROM.begin(6);
+
+      // Werte beim Abschalten wegschreiben
+      EEPROM.write(B0V,lastMessage[6]);
+      EEPROM.write(B1V,lastMessage[7]);
+      EEPROM.write(B0H,lastMessage[10]);
+      EEPROM.write(B1H,lastMessage[11]);
+      EEPROM.write(B2H,lastMessage[12]);
+      EEPROM.write(B3H,lastMessage[13]);
+
+      EEPROM.end();
+      hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
+      
+    }
     
 
     //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 

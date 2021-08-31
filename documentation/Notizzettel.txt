@@ -22,8 +22,6 @@ https://onlinegdb.com/mXEVFzbspm
 
 Erkenntnis: 
 1. Wenn die Checksumme 0 ist, wird sie nicht mitgesendet! (Oder von meinem Programm nicht detektiert.
-2. 10 00 B1 10 20 68 wird nicht vom Motor gesendet (klingt ja auch logisch, da Motor Adressat ist)
-
 
 10 00 B1 startet polling vom Motor
 10 60 99 stoppt polling vmo Motor
@@ -32,6 +30,7 @@ Erkenntnis:
 
 10 C1 29 26 C0 30 C3 43 C1 99 FC CC C0 86: von Batterie an Display, Byte 8 & 0x0F ist 10er Stelle, Bit 9 & 0xF0 ist 1er Stelle, Bit 9 & 0x0F ist erste Nachkommastelle vom Speed.
 
+10 01 28 09 94 B0 09 C4 14 B1: die nächsten beiden Bytes Akku-Stand?!
 
 Auf 10 21 01 12 00 D0 vom Motor antwortet Batterie mit 10 02 20 12 9F ist aber beim Abschalten...
 
