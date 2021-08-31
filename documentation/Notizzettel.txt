@@ -48,8 +48,22 @@ Antworten auf 10 21 04 08 94 38 28 3A D7:
 Bytes 12, 13 + 14 verändern sich, wenn sich das Rad gedreht hat. 
 Bei nur ein und Ausschalten, ohne Raddrehung bleiben sie gleich.
 
-Motor sendet beim Abschalten unter Befehl 09 als Bytes 12+13 die Bytes, die er beim Einschalten als Bytes 13+14 empfangen hat.
-Batterie sendet beim Einschalten als Bytes 7+8 die er beim letzten Abschalten als Bytes 6+7 mit Befehl 09 vom Motor erhalten hat.
+Motor sendet beim Abschalten unter Befehl 09 als Bytes 12+13 die Bytes, die er beim Einschalten als Antwort auf Befehl 08 als Bytes 13+14 empfangen hat.
+Batterie sendet beim Einschalten als Antwort auf Befehl 08 als Bytes 7+8 die er beim letzten Abschalten als Bytes 6+7 mit Befehl 09 vom Motor erhalten hat.
 
 10 01 21 34 01 7F Befehl zum Einschalten?!
 10 01 21 31 00 22 Befehl zum Ausschalten?!
+
+10 04 20 CC FF von Batterie mit Antwort
+10 23 00 AB FF vom Motor kommt alle ca. 200 Zeilen
+
+Beim Einschalten:
+10 C1 00 20 03 vom Motor ans Display
+10 02 C8 20 05 06 00 00 00 00 23 06 0A ist Antwort vom Display mit Seriennummer des Displays
+
+kurz vorher sendet Batterie an Motor:
+10 01 20 32 75
+10 22 00 32 EA ist Antwort vom Motor
+
+
+
