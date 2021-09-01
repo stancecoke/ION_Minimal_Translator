@@ -15,7 +15,7 @@ uint8_t transmitBuffer[255];
 uint8_t startSequence[255]={24,24,0,14,25,25,20,21};
 uint8_t runSequence[255]={13,21,21,21,21,21,21,21};
 uint8_t systemState=0;
-uint8_t BatteryToMotor[27][17]={
+uint8_t BatteryToMotor[29][17]={
   {0x10,0x01,0x20,0x30,0x14}, //00
   {0x10,0x01,0x20,0x32,0x75}, //01
   {0x10,0x01,0x20,0x33,0xE4}, //02
@@ -42,7 +42,9 @@ uint8_t BatteryToMotor[27][17]={
   {0x10,0x40,0x40}, //23
   {0x10,0x44,0x20,0x19}, //24
   {0x10,0x64,0x20,0xD2}, //25
-  {0x10, 0xC1, 0x29, 0x26, 0xC0, 0x30, 0xC3, 0x3F, 0xC0, 0x00, 0xFC, 0xCC, 0xC0, 0x73} //26
+  {0x10, 0xC1, 0x29, 0x26, 0xC0, 0x30, 0xC3, 0x3F, 0xC0, 0x00, 0xFC, 0xCC, 0xC0, 0x73}, //26
+  {0x10,0xC1,0x21,0x22,0x80,0x5F}, //27
+  {0x10, 0x22, 0xC2, 0x22, 0x00, 0xEE, 0x76} //28
   };
 
   uint8_t nbBytes = 0;
@@ -55,6 +57,7 @@ uint8_t BatteryToMotor[27][17]={
   uint8_t crc = 0;
   uint8_t n = 0;
   uint8_t messageCounter = 0;
+  uint8_t displayCounter = 0;
   uint8_t startNewMessage = 0;
   uint8_t NewMessageFlag = 0;
   uint8_t UARTidleFlag = 0;
@@ -210,15 +213,20 @@ void loop() {
       
       messageCounter++;
       if (messageCounter>100){
-        //hwSerCntrl.write((uint8_t *)&BatteryToMotor[24], 4);
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[20], 4);
+        memcpy(transmitBuffer, BatteryToMotor[27], ((BatteryToMotor[27][2]&0x0F)+5));
+        displayCounter++;
+        transmitBuffer[4]= displayCounter;
+        transmitBuffer[5] = crc8_bow((uint8_t *)&transmitBuffer,(transmitBuffer[2]&0x0F)+4);
+        hwSerCntrl.write((uint8_t *)&transmitBuffer, (transmitBuffer[2]&0x0F)+5);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[28], (BatteryToMotor[28][2]&0x0F)+5); 
         delay(5);
-        //hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
         messageCounter=0;
+        if(displayCounter>0x0F)displayCounter=0;
       }
 
       else if (messageCounter==50){
-        hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
+        //hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
       }
 
       else if (messageCounter==75||messageCounter==78){
@@ -228,8 +236,14 @@ void loop() {
       }
       else if (receivedByte==0xFE){ //Abschaltsignal senden
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[3], (BatteryToMotor[3][2]&0x0F)+5); 
+        
+        
+      }
+      else if (receivedByte==0xF9){ //Abschaltsignal senden
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[22], 3);         
         receivedByte=0xFD;
       }
+     
       else if (receivedByte==0xFF){ //Einschaltsignal senden
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[4], (BatteryToMotor[4][2]&0x0F)+5); 
         receivedByte=0xFD;
@@ -277,7 +291,7 @@ void loop() {
 
       EEPROM.end();
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
-      
+      receivedByte=0xF9;
     }
     
 
