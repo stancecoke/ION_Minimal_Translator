@@ -65,8 +65,8 @@ uint8_t BatteryToMotor[29][17]={
   {0x10,0x01,0x23,0x08,0x48,0x4D,0x04,0xD2}, //09
   {0x10,0x01,0x23,0x08,0x48,0x4E,0x00,0x54}, //10
   {0x10,0x01,0x23,0x08,0x48,0x4E,0x02,0x35}, //11
-  {0x10,0x01,0x23,0x08,0x48,0x4E,0x04,0x96}, //12
-  {0x10,0x01,0x28,0x09,0x94,0xB0,0x09,0xC4,0x14,0xB1,0x00,0xEC,0xDF}, //13
+  {0x10,0x22,0xC0,0x26,0xD}, //12 answer to display update
+  {0x10,0xC1,0x29,0x26,0xC0,0x30,0xC3,0x43,0xC1,0x99,0xFC,0xCC,0xC0,0x8}, //13 display update 10 C1 29 26 C0 30 C3 43 C1 99 FC CC C0 86 
   {0x10,0x01,0x28,0x09,0x94,0xB0,0x09,0xC4,0x14,0xB1,0x01,0x00,0xAE}, //14
   {0x10,0x02,0x20,0x11,0x6F}, //15
   {0x10,0x02,0x20,0x12,0x9F}, //16  10 02 20 12 9F 
@@ -87,7 +87,7 @@ uint8_t BatteryToMotor[29][17]={
   uint8_t nbBytes = 0;
   uint8_t receivedByte = 0;
   uint32_t lastTime = 0;
-  uint16_t systemLife = 0;
+  uint16_t speed = 0;
   uint32_t counter = 0;
   uint8_t length = 255;
   uint8_t len = 255;
@@ -256,7 +256,7 @@ void loop() {
       
       
       messageCounter++;
-      if (messageCounter>100){
+      if (messageCounter>100){ // send battery to display upcounting command and answer from display
         memcpy(transmitBuffer, BatteryToMotor[27], ((BatteryToMotor[27][2]&0x0F)+5));
         displayCounter++;
         transmitBuffer[4]= displayCounter;
@@ -269,9 +269,18 @@ void loop() {
         if(displayCounter>0x0F)displayCounter=0;
       }
 
-      else if (messageCounter==50){
-        //hwSerCntrl.write((uint8_t *)&BatteryToMotor[6], 6);
+      else if (messageCounter==50){//send display update command and answer form display (speed in km/h+10 as decimal digits in bytes 8 + 9)
+        memcpy(transmitBuffer, BatteryToMotor[13], ((BatteryToMotor[13][2]&0x0F)+5));
+        transmitBuffer[8]=(speed/100)&0x0F; //100er Stelle
+        transmitBuffer[9]=((speed-100*transmitBuffer[8])<<8)|(speed % 10);//10er stelle in oberen 4 bits, 1er Stelle in unteren 4 bits
+        transmitBuffer[13] = crc8_bow((uint8_t *)&transmitBuffer,(transmitBuffer[2]&0x0F)+4);
+        hwSerCntrl.write((uint8_t *)&transmitBuffer, (transmitBuffer[2]&0x0F)+5);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[12], (BatteryToMotor[12][2]&0x0F)+5); //answer from display
+        delay(5);
+        hwSerCntrl.write((uint8_t *)&BatteryToMotor[21], 3);
+        
       }
+
 
       else if (messageCounter==75||messageCounter==78){
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[25], 4);
@@ -343,7 +352,7 @@ void loop() {
     //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 
     else if(lastMessage[1]==0x21&&lastMessage[5]==0xC0){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
-        
+      speed= (lastMessage[6]<<8)+lastMessage[7];  
     }
 
     //Antwort auf 10 21 01 12 00 D0 
