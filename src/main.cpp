@@ -272,7 +272,7 @@ void loop() {
       else if (messageCounter==50){//send display update command and answer form display (speed in km/h+10 as decimal digits in bytes 8 + 9)
         memcpy(transmitBuffer, BatteryToMotor[13], ((BatteryToMotor[13][2]&0x0F)+5));
         transmitBuffer[8]=0xC0|((speed/100)&0x0F); //100er Stelle
-        transmitBuffer[9]=((speed-100*transmitBuffer[8])<<8)|(speed % 10);//10er stelle in oberen 4 bits, 1er Stelle in unteren 4 bits
+        transmitBuffer[9]=(((speed-100*(transmitBuffer[8]&0x0F))/10)<<4)|(speed % 10);//10er stelle in oberen 4 bits, 1er Stelle in unteren 4 bits
         transmitBuffer[13] = crc8_bow((uint8_t *)&transmitBuffer,(transmitBuffer[2]&0x0F)+4);
         hwSerCntrl.write((uint8_t *)&transmitBuffer, (transmitBuffer[2]&0x0F)+5);
         hwSerCntrl.write((uint8_t *)&BatteryToMotor[12], (BatteryToMotor[12][2]&0x0F)+5); //answer from display
@@ -352,7 +352,8 @@ void loop() {
     //Antwort auf 10 21 0A 09: 10 02 21 09 00 AB 
     else if(lastMessage[1]==0x21&&lastMessage[5]==0xC0){
       hwSerCntrl.write((uint8_t *)&BatteryToMotor[17], (BatteryToMotor[17][2]&0x0F)+5);
-      speed= (lastMessage[6]<<8)+lastMessage[7];  
+      speed = (lastMessage[6]<<8)+lastMessage[7];  
+      //Serial.println(speed);
     }
 
     //Antwort auf 10 21 01 12 00 D0 
