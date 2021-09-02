@@ -1,5 +1,5 @@
 # ION_Minimal_Translator
-Running an ION EBike-Motor with a NoName batterie and a Kunteng display
+Running an ION EBike-Motor with a NoName batterie and a Kunteng display  
 Based on an ESP32 Wroom  
 Status: Not working yet :-(  
 sending sniffed data to ESP USB interface @115200 BAUD  
