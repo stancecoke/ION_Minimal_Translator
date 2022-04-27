@@ -1,6 +1,6 @@
 # ION_Minimal_Translator
 I stopped working on this project, but other guys made it work meanwhile:  
-https://github.com/void-spark/SpartaIonStuff
+https://github.com/void-spark/SpartaIonStuff  
 Running an ION EBike-Motor with a NoName batterie and a Kunteng display  
 Based on an ESP32 Wroom  
 Status: Not working yet :-(  
